@@ -1,51 +1,71 @@
-// Generated using webpack-cli https://github.com/webpack/webpack-cli
-
-const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
-
-const isProduction = process.env.NODE_ENV == 'production';
-
-
-const config = {
-    entry: './src/index.js',
-    output: {
-        path: path.resolve(__dirname, 'dist'),
-    },
-    devServer: {
-        open: true,
-        host: 'localhost',
-    },
-    plugins: [
-        new HtmlWebpackPlugin({
-            template: 'index.html',
-        }),
-
-        // Add your plugins here
-        // Learn more about plugins from https://webpack.js.org/configuration/plugins/
-    ],
-    module: {
-        rules: [
-            {
-                test: /\.(eot|svg|ttf|woff|woff2|png|jpg|gif)$/i,
-                type: 'asset',
-            },
-
-            // Add your rules for custom modules here
-            // Learn more about loaders from https://webpack.js.org/loaders/
-        ],
-    },
-};
+const WebpackPwaManifest = require('webpack-pwa-manifest');
+const path = require('path');
+const { InjectManifest } = require('workbox-webpack-plugin');
 
 module.exports = () => {
-    if (isProduction) {
-        config.mode = 'production';
-        
-        
-        config.plugins.push(new WorkboxWebpackPlugin.GenerateSW());
-        
-    } else {
-        config.mode = 'development';
-    }
-    return config;
+    return {
+        mode: 'development',
+        entry: {
+            main: './src/js/index.js',
+            install: './src/js/install.js'
+        },
+        output: {
+            filename: '[name].bundle.js',
+            path: path.resolve(__dirname, 'dist'),
+        },
+        plugins: [
+            // Webpack plugin that generates our html file and injects our bundles. 
+            new HtmlWebpackPlugin({
+                template: './index.html',
+                title: 'J.A.T.E.'
+            }),
+
+            // Injects our custom service worker
+            new InjectManifest({
+                swSrc: './src-sw.js',
+                swDest: 'src-sw.js',
+            }),
+
+            // Creates a manifest.json file.
+            new WebpackPwaManifest({
+                fingerprints: false,
+                inject: true,
+                name: 'Just Another Text Editor',
+                short_name: 'J.A.T.E',
+                description: 'Takes notes with Javascript highlighting!',
+                background_color: '#225ca3',
+                theme_color: '#225ca3',
+                start_url: './',
+                publicPath: './',
+                icons: [
+                    {
+                        src: path.resolve('./src/images/logo.png'),
+                        sizes: [96, 128, 192, 256, 384, 512],
+                        destination: path.join("assets", "icons"),
+                    },
+                ],
+            }),
+        ],
+
+        module: {
+            rules: [
+                {
+                    test: /\.css$/i,
+                    use: ['style-loader', 'css-loader'],
+                },
+                {
+                    test: /\.m?js$/,
+                    exclude: /node_modules/,
+                    use: {
+                        loader: 'babel-loader',
+                        options: {
+                            presets: ['@babel/preset-env'],
+                            plugins: ['@babel/plugin-proposal-object-rest-spread', '@babel/transform-runtime'],
+                        },
+                    },
+                },
+            ],
+        },
+    };
 };
